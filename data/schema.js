@@ -9,7 +9,7 @@
 
 import {
   GraphQLBoolean,
-  GraphQLFloat,
+  //GraphQLFloat,
   GraphQLID,
   GraphQLInt,
   GraphQLList,
@@ -23,20 +23,26 @@ import {
   connectionArgs,
   connectionDefinitions,
   connectionFromArray,
+  //cursorForObjectInConnection,
   fromGlobalId,
   globalIdField,
   mutationWithClientMutationId,
   nodeDefinitions,
+  toGlobalId,
 } from 'graphql-relay';
 
 import {
-  // Import methods that your schema can use to interact with your database
-  User,
-  Widget,
-  getUser,
-  getViewer,
-  getWidget,
-  getWidgets,
+  Todo,
+  TodoList,
+  create,
+  update,
+  updateAll,
+  destroy,
+  destroyCompleted,
+  areAllComplete,
+  getAll,
+  getTodo,
+  getTodoList
 } from './database';
 
 /**
@@ -48,52 +54,37 @@ import {
 var {nodeInterface, nodeField} = nodeDefinitions(
   (globalId) => {
     var {type, id} = fromGlobalId(globalId);
-    if (type === 'User') {
-      return getUser(id);
-    } else if (type === 'Widget') {
-      return getWidget(id);
+    if (type === 'Todo') {
+      return getTodo(id);
+    } else if (type === 'TodoList') {
+      return getTodoList();
     } else {
       return null;
     }
   },
   (obj) => {
-    if (obj instanceof User) {
-      return userType;
-    } else if (obj instanceof Widget)  {
-      return widgetType;
+    if (obj instanceof Todo) {
+      return GraphQLTodo;
+    } else if (obj instanceof TodoList) {
+      return GraphQLTodoList;
     } else {
       return null;
     }
   }
 );
 
-/**
- * Define your own types here
- */
-
-var userType = new GraphQLObjectType({
-  name: 'User',
-  description: 'A person who uses our app',
+var GraphQLTodo = new GraphQLObjectType({
+  name: 'Todo',
+  description: 'A task to do',
   fields: () => ({
-    id: globalIdField('User'),
-    widgets: {
-      type: widgetConnection,
-      description: 'A person\'s collection of widgets',
-      args: connectionArgs,
-      resolve: (_, args) => connectionFromArray(getWidgets(), args),
-    },
-  }),
-  interfaces: [nodeInterface],
-});
-
-var widgetType = new GraphQLObjectType({
-  name: 'Widget',
-  description: 'A shiny widget',
-  fields: () => ({
-    id: globalIdField('Widget'),
-    name: {
+    id: globalIdField('Todo'),
+    text: {
       type: GraphQLString,
-      description: 'The name of the widget',
+      resolve: (obj) => obj.text,
+    },
+    complete: {
+      type: GraphQLBoolean,
+      resolve: (obj) => obj.complete,
     },
   }),
   interfaces: [nodeInterface],
@@ -102,42 +93,166 @@ var widgetType = new GraphQLObjectType({
 /**
  * Define your own connection types here
  */
-var {connectionType: widgetConnection} =
-  connectionDefinitions({name: 'Widget', nodeType: widgetType});
+var {connectionType: todosConnection,
+           edgeType: GraphQLTodoEdge,
+} = connectionDefinitions({
+               name: 'Todo', 
+           nodeType: GraphQLTodo
+});
 
-/**
- * This is the type that will be the root of our query,
- * and the entry point into our schema.
- */
-var queryType = new GraphQLObjectType({
-  name: 'Query',
+var GraphQLTodoList = new GraphQLObjectType({
+  name: 'TodoList',
+  description: 'A list of tasks to do',
   fields: () => ({
-    node: nodeField,
-    // Add your own root fields here
-    viewer: {
-      type: userType,
-      resolve: () => getViewer(),
+    id: globalIdField('TodoList'),
+    todos: {
+      type: todosConnection,
+      args: {},
+      resolve: (obj) =>
+        connectionFromArray(getAll(status), args),
     },
+    areAllComplete: {
+      type: GraphQLBoolean,
+      resolve: () => areAllComplete(),
+    }
   }),
+  interfaces: [nodeInterface],
+});
+
+var commonFields = {
+    todoList: {
+      type: GraphQLTodoList,
+      resolve: () => getTodoList(),
+    },
+};
+
+var rootType = new GraphQLObjectType({
+  name: 'Root',
+  fields: Object.assign({
+    node: nodeField,
+  }, commonFields),
 });
 
 /**
  * This is the type that will be the root of our mutations,
  * and the entry point into performing writes in our schema.
  */
-var mutationType = new GraphQLObjectType({
-  name: 'Mutation',
-  fields: () => ({
-    // Add your own mutations here
-  })
+var createMutation = new GraphQLObjectType({
+  name: 'CreateTodo',
+  inputFields: {
+    text: { type: new GraphQLNonNull(GraphQLString) },
+  },
+  outputFields: Object.assign({
+    todoEdge: {
+      type: GraphQLTodoEdge,
+      resolve: ({localTodoId}) => {
+        var todo = getTodo(localTodoId);
+        return {
+          cursor: cursorForObjectInConnection(getAll(), todo),
+          node: todo,
+        };
+      },
+    },
+  }, commonFields),
+  mutateAndGetPayload: ({text}) => {
+    var localTodoId = create(text);
+    return {localTodoId};
+  },
 });
 
-/**
- * Finally, we construct our schema (whose starting query type is the query
- * type we defined above) and export it.
- */
-export var Schema = new GraphQLSchema({
-  query: queryType,
-  // Uncomment the following after adding some mutation fields:
-  // mutation: mutationType
+
+var updateOutputFields = Object.assign({
+    todo: {
+      type: GraphQLTodo,
+      resolve: ({localTodoId}) => getTodo(localTodoId),
+    }
+  }, commonFields);
+
+var updateTextMutation = mutationWithClientMutationId({
+  name: 'UpdateText',
+  inputFields: {
+    text: { type: new GraphQLNonNull(GraphQLString) },
+    id: { type: new GraphQLNonNull(GraphQLID) },
+  },
+  outputFields: updateOutputFields,
+  mutateAndGetPayload: ({id, complete}) => {
+    var localTodoId = fromGlobalId(id).id;
+    update(localTodoId, {complete});
+    return {localTodoId};
+  },
+});
+
+var toggleCompleteMutation = mutationWithClientMutationId({
+  name: 'ToggleComplete',
+  inputFields: {
+    complete: { type: new GraphQLNonNull(GraphQLBoolean) },
+    id: { type: new GraphQLNonNull(GraphQLID) },
+  },
+  outputFields: updateOutputFields,
+  mutateAndGetPayload: ({id, complete}) => {
+    var localTodoId = fromGlobalId(id).id;
+    update(localTodoId, {complete});
+    return {localTodoId};
+  },
+});
+
+var toggleCompleteAllMutation = mutationWithClientMutationId({
+  name: 'ToggleCompleteAllTodos',
+  inputFields: {
+    complete: { type: new GraphQLNonNull(GraphQLBoolean) },
+  },
+  outputFields: Object.assign({
+    changedTodos: {
+      type: new GraphQLList(GraphQLTodo),
+      resolve: ({changedTodoLocalIds}) => changedTodoLocalIds.map(getTodo),
+    }
+  }, commonFields),
+  mutateAndGetPayload: ({complete}) => {
+    var changedTodoLocalIds = updateAll({complete});  //TODO: check syntax correctness
+    return {changedTodoLocalIds};
+  },
+});
+
+var destroyMutation = mutationWithClientMutationId({
+  name: 'DestroyTodo',
+  inputFields: {
+    id: { type: new GraphQLNonNull(GraphQLID) },
+  },
+  outputFields: commonFields,
+  mutateAndGetPayload: ({id}) => {
+    var localTodoId = fromGlobalId(id).id;
+    destroy(localTodoId);
+  },
+});
+
+var destroyCompletedMutation = mutationWithClientMutationId({
+  name: 'DestroyCompletedTodos',
+  outputFields: Object.assign({
+    destroyedTodoIds: {
+      type: new GraphQLList(GraphQLString),
+      resolve: ({destroyedTodoIds}) => destroyedTodoIds,
+    }
+  }, commonFields),
+  mutateAndGetPayload: () => {
+    var destroyedTodoLocalIds = destroyCompleted();
+    var destroyedTodoIds = destroyedTodoLocalIdsTodoLocalIds.map(toGlobalId.bind(null, 'Todo'));
+    return {deletedTodoIds};
+  },
+});
+
+var Mutation = new GraphQLObjectType({
+  name: 'Mutation',
+  fields: {
+    createTodo: createMutation,
+    updateText: updateTextMutation,
+    toggleComplete: toggleCompleteMutation,
+    toggleCompleteAll: toggleCompleteAllMutation,
+    destroyTodo: destroyMutation,
+    destroyCompletedTodos: destroyCompletedMutation,
+  },
+});
+
+export var schema = new GraphQLSchema({
+  query: Root,
+  mutation: Mutation,
 });

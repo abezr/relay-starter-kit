@@ -2,14 +2,14 @@
   "data": {
     "__schema": {
       "queryType": {
-        "name": "Query"
+        "name": "Root"
       },
       "mutationType": null,
       "subscriptionType": null,
       "types": [
         {
           "kind": "OBJECT",
-          "name": "Query",
+          "name": "Root",
           "description": null,
           "fields": [
             {
@@ -38,19 +38,19 @@
               },
               "isDeprecated": false,
               "deprecationReason": null
-            },
-            {
-              "name": "viewer",
-              "description": null,
-              "args": [],
-              "type": {
-                "kind": "OBJECT",
-                "name": "User",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
+            }//,
+            // {
+            //   "name": "viewer",
+            //   "description": null,
+            //   "args": [],
+            //   "type": {
+            //     "kind": "OBJECT",
+            //     "name": "User",
+            //     "ofType": null
+            //   },
+            //   "isDeprecated": false,
+            //   "deprecationReason": null
+            // }
           ],
           "inputFields": null,
           "interfaces": [],
@@ -95,20 +95,20 @@
           "possibleTypes": [
             {
               "kind": "OBJECT",
-              "name": "User",
+              "name": "Todo",
               "ofType": null
-            },
-            {
-              "kind": "OBJECT",
-              "name": "Widget",
-              "ofType": null
-            }
+            }//,
+            // {
+            //   "kind": "OBJECT",
+            //   "name": "Widget",
+            //   "ofType": null
+            // }
           ]
         },
         {
           "kind": "OBJECT",
-          "name": "User",
-          "description": "A person who uses our app",
+          "name": "TodoList",
+          "description": "A list of todos",
           "fields": [
             {
               "name": "id",
@@ -127,53 +127,81 @@
               "deprecationReason": null
             },
             {
-              "name": "widgets",
-              "description": "A person's collection of widgets",
-              "args": [
-                {
-                  "name": "after",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  },
-                  "defaultValue": null
-                },
-                {
-                  "name": "first",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "defaultValue": null
-                },
-                {
-                  "name": "before",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  },
-                  "defaultValue": null
-                },
-                {
-                  "name": "last",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
-                    "ofType": null
-                  },
-                  "defaultValue": null
-                }
-              ],
+              "name": "todos",
+              "description": "A collection of todos",
+              "args": [],
               "type": {
                 "kind": "OBJECT",
-                "name": "WidgetConnection",
+                "name": "TodoConnection",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "totalCount",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+          ],
+          "inputFields": null,
+          "interfaces": [
+            {
+              "kind": "INTERFACE",
+              "name": "Node",
+              "ofType": null
+            }
+          ],
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "Todo",
+          "description": null,
+          "fields": [
+            {
+              "name": "id",
+              "description": "The ID of an object",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "text",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "complete",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
                 "ofType": null
               },
               "isDeprecated": false,

@@ -1,33 +1,65 @@
-/**
- *  Copyright (c) 2015, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- */
+export class Todo extends Object {}
+export class TodoList extends Object {}
 
-// Model types
-class User extends Object {}
-class Widget extends Object {}
+var assign = require('object-assign');
 
 // Mock data
-var viewer = new User();
-viewer.id = '1';
-viewer.name = 'Anonymous';
-var widgets = ['What\'s-it', 'Who\'s-it', 'How\'s-it'].map((name, i) => {
-  var widget = new Widget();
-  widget.name = name;
-  widget.id = `${i}`;
-  return widget;
-});
+var _todos = {};
+var _todoList = {todos:_todos};
+var completedTodoId = create('Taste JavaScript');
+update(completedTodoId, {complete: true});
+create('Buy a unicorn');
 
 module.exports = {
-  // Export methods that your schema can use to interact with your database
-  getUser: (id) => id === viewer.id ? viewer : null,
-  getViewer: () => viewer,
-  getWidget: (id) => widgets.find(w => w.id === id),
-  getWidgets: () => widgets,
-  User,
-  Widget,
+  create: text => {
+    var id = (+new Date() + Math.floor(Math.random() * 999999)).toString(36);
+    _todos[id] = {
+      id: id,
+      complete: false,
+      text: text
+    };
+    return id;
+  },
+  
+  update: (id, updates) => {
+    let todo = _todos[id],
+      updated = Object.keys(updates).some(x => todo[x] !== updates[x]);
+    if (needUpdate) {
+      _todos[id] = Object.assign(todo, updates);
+    }
+    return updated;
+  },
+  
+  destroy: id => {
+    delete _todos[id];
+    return id;
+  },
+
+  updateAll: updates => _todos
+    .filter(x => x.update(x.id, updates))
+    .map(todo => todo.id),
+  
+  destroyCompleted: () => _todos.filter(x => x.complete).map(destroy),
+
+  areAllComplete: () => _todos.every(x => x.complete),
+
+  getAll: () => _todos,
+
+  getTodo: id => _todos[id],
+
+  getTodoList: () => _todoList,
+
+  // emitChange: () => {
+  //   this.emit(CHANGE_EVENT);
+  // },
+
+  // addChangeListener: callback => {
+  //   this.on(CHANGE_EVENT, callback);
+  // },
+
+  // removeChangeListener: callback => {
+  //   this.removeListener(CHANGE_EVENT, callback);
+  // },
+  Todo,
+  TodoList
 };
